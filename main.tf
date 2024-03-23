@@ -60,10 +60,14 @@ module "function_app" {
   resource_group_name = var.resource_group_name
   location            = var.location
 
-  os_type                  = var.function_app_os_type # "Linux" / "Windows" / azurerm_service_plan.example.os_type
-  service_plan_resource_id = var.function_app_service_plan_resource_id
+  https_only                    = true
+  os_type                       = var.os_type # "Linux" / "Windows" / azurerm_service_plan.example.os_type
+  public_network_access_enabled = false
+  service_plan_resource_id      = var.service_plan_resource_id
 
-  storage_account_name = module.storage_account.name
+  storage_account_name          = module.storage_account.name
+  storage_uses_managed_identity = true
+  #storage_account_access_key = module.storage_account.resource.primary_connection_string
 
   managed_identities = {
     system_assigned = true
@@ -79,7 +83,7 @@ module "function_app" {
   }
 
   site_config = merge(
-    #var.site_config
+    var.site_config,
     {
       # application_insights_connection_string = ""
       vnet_route_all_enabled = true
@@ -88,7 +92,7 @@ module "function_app" {
 
   # https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings
   app_settings = merge(
-    #var.app_settings,
+    var.app_settings,
     {
 
       # these are used by managed identity, but MI can only be used on dedicated plans, not on elastic premium
