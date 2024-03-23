@@ -1,34 +1,106 @@
-# TODO: insert resources here.
-data "azurerm_resource_group" "parent" {
-  count = var.location == null ? 1 : 0
-
-  name = var.resource_group_name
+locals {
+  endpoints = toset(["blob", "queue", "table", "file"])
 }
 
-# TODO: Replace this dummy resource azurerm_resource_group.TODO with your module resource
-resource "azurerm_resource_group" "TODO" {
-  location = coalesce(var.location, local.resource_group_location)
-  name     = var.name # calling code must supply the name
+# https://learn.microsoft.com/en-us/azure/azure-functions/configure-networking-how-to?tabs=portal#secure-storage-during-function-app-creation
+module "storage_account" {
+  # TODO replace with 0.1.2 when it is published - this is needed to fix an issue in 0.1.1
+  source = "git::https://github.com/Azure/terraform-azurerm-avm-res-storage-storageaccount"
+  #version                  = "~> 0.1.2"
+  account_replication_type      = "LRS"
+  name                          = var.function_app_storage_account_name
+  resource_group_name           = var.resource_group_name
+  location                      = var.location
+  public_network_access_enabled = false
+  # this is necessary as managed identity does work with Elastic Premium Plans due to missing authentication support in Azure Files
+  shared_access_key_enabled = true
+
+
+  private_endpoints = {
+    for endpoint in local.endpoints :
+    endpoint => {
+      name                          = "pe-${endpoint}-${var.function_app_storage_account_name}"
+      subnet_resource_id            = var.private_endpoint_subnet_resource_id
+      subresource_name              = [endpoint]
+      private_dns_zone_resource_ids = ["/subscriptions/${var.private_dns_zone_subscription_id}/resourceGroups/${var.private_dns_zone_resource_group_name}/providers/Microsoft.Network/privateDnsZones/privatelink.${endpoint}.core.windows.net"]
+      tags                          = var.tags
+    }
+  }
+
+  role_assignments = {
+    storage_blob_data_owner = {
+      role_definition_id_or_name = "Storage Blob Data Owner"
+      principal_id               = module.function_app.resource.identity[0].principal_id
+    }
+    storage_account_contributor = {
+      role_definition_id_or_name = "Storage Account Contributor"
+      principal_id               = module.function_app.resource.identity[0].principal_id
+    }
+    storage_queue_data_contributor = {
+      role_definition_id_or_name = "Storage Queue Data Contributor"
+      principal_id               = module.function_app.resource.identity[0].principal_id
+    }
+  }
+
+  shares = {
+    function_app_share = {
+      name  = "${var.function_app_storage_account_name}"
+      quota = 100
+    }
+  }
+
+  tags = var.tags
 }
 
-# required AVM resources interfaces
-resource "azurerm_management_lock" "this" {
-  count = var.lock.kind != "None" ? 1 : 0
+module "function_app" {
+  source  = "Azure/avm-res-web-site/azurerm"
+  version = "0.1.2"
 
-  lock_level = var.lock.kind
-  name       = coalesce(var.lock.name, "lock-${var.name}")
-  scope      = azurerm_resource_group.TODO.id # TODO: Replace this dummy resource azurerm_resource_group.TODO with your module resource
-}
+  name                = var.name
+  resource_group_name = var.resource_group_name
+  location            = var.location
 
-resource "azurerm_role_assignment" "this" {
-  for_each = var.role_assignments
+  os_type                  = var.function_app_os_type # "Linux" / "Windows" / azurerm_service_plan.example.os_type
+  service_plan_resource_id = var.function_app_service_plan_resource_id
 
-  principal_id                           = each.value.principal_id
-  scope                                  = azurerm_resource_group.TODO.id # TODO: Replace this dummy resource azurerm_resource_group.TODO with your module resource
-  condition                              = each.value.condition
-  condition_version                      = each.value.condition_version
-  delegated_managed_identity_resource_id = each.value.delegated_managed_identity_resource_id
-  role_definition_id                     = strcontains(lower(each.value.role_definition_id_or_name), lower(local.role_definition_resource_substring)) ? each.value.role_definition_id_or_name : null
-  role_definition_name                   = strcontains(lower(each.value.role_definition_id_or_name), lower(local.role_definition_resource_substring)) ? null : each.value.role_definition_id_or_name
-  skip_service_principal_aad_check       = each.value.skip_service_principal_aad_check
+  storage_account_name = module.storage_account.name
+
+  managed_identities = {
+    system_assigned = true
+  }
+
+  private_endpoints = {
+    primary = {
+      name                          = "pe-${var.name}"
+      private_dns_zone_resource_ids = ["/subscriptions/${var.private_dns_zone_subscription_id}/resourceGroups/${var.private_dns_zone_resource_group_name}/providers/Microsoft.Network/privateDnsZones/privatelink.azurewebsites.net"]
+      subnet_resource_id            = var.private_endpoint_subnet_resource_id
+      tags                          = var.tags
+    }
+  }
+
+  site_config = merge(
+    #var.site_config
+    {
+      # application_insights_connection_string = ""
+      vnet_route_all_enabled = true
+    }
+  )
+
+  # https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings
+  app_settings = merge(
+    #var.app_settings,
+    {
+
+      # these are used by managed identity, but MI can only be used on dedicated plans, not on elastic premium
+      # ref: # https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings     
+      AzureWebJobsStorage__blobServiceUri  = "https://${module.storage_account.name}.blob.core.windows.net"
+      AzureWebJobsStorage__queueServiceUri = "https://${module.storage_account.name}.queue.core.windows.net"
+      AzureWebJobsStorage__tableServiceUri = "https://${module.storage_account.name}.table.core.windows.net"
+
+      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING = "${module.storage_account.resource.primary_connection_string}"
+      WEBSITE_CONTENTSHARE                     = "${var.function_app_storage_account_name}"
+
+      WEBSITE_CONTENTOVERVNET = 1
+    }
+  )
 }
