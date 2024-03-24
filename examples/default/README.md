@@ -51,7 +51,7 @@ resource "azurerm_subnet" "this" {
 
 resource "azurerm_subnet" "app_service" {
   address_prefixes     = ["192.168.0.128/25"]
-  name                 = module.naming.subnet.name_unique
+  name                 = "${module.naming.subnet.name_unique}-appservice"
   resource_group_name  = azurerm_resource_group.this.name
   virtual_network_name = azurerm_virtual_network.this.name
   delegation {
@@ -86,7 +86,7 @@ resource "azurerm_log_analytics_workspace" "this" {
   location            = azurerm_resource_group.this.location
   name                = module.naming.log_analytics_workspace.name_unique
   resource_group_name = azurerm_resource_group.this.name
-  retention_in_days   = 7
+  retention_in_days   = 30
   sku                 = "PerGB2018"
 }
 
