@@ -5,7 +5,7 @@ locals {
 # https://learn.microsoft.com/en-us/azure/azure-functions/configure-networking-how-to?tabs=portal#secure-storage-during-function-app-creation
 module "storage_account" {
   # TODO replace with 0.1.2 when it is published - this is needed to fix an issue in 0.1.1
-  source = "git::https://github.com/Azure/terraform-azurerm-avm-res-storage-storageaccount"
+  source = "git::https://github.com/Azure/terraform-azurerm-avm-res-storage-storageaccount?ref=5c5af3b08b3b4f60ab4fb3315a2079b672bca38d"
   #version                  = "~> 0.1.2"
   account_replication_type      = "LRS"
   name                          = var.function_app_storage_account_name
@@ -44,7 +44,7 @@ module "storage_account" {
 
   shares = {
     function_app_share = {
-      name  = "${var.function_app_storage_account_name}"
+      name  = var.function_app_storage_account_name
       quota = 100
     }
   }
@@ -101,8 +101,8 @@ module "function_app" {
       AzureWebJobsStorage__queueServiceUri = "https://${module.storage_account.name}.queue.core.windows.net"
       AzureWebJobsStorage__tableServiceUri = "https://${module.storage_account.name}.table.core.windows.net"
 
-      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING = "${module.storage_account.resource.primary_connection_string}"
-      WEBSITE_CONTENTSHARE                     = "${var.function_app_storage_account_name}"
+      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING = module.storage_account.resource.primary_connection_string
+      WEBSITE_CONTENTSHARE                     = var.function_app_storage_account_name
 
       WEBSITE_CONTENTOVERVNET = 1
     }

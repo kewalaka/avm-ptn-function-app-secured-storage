@@ -11,10 +11,6 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.97.0"
     }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6.0"
-    }
   }
 }
 
@@ -47,11 +43,26 @@ resource "azurerm_virtual_network" "this" {
 }
 
 resource "azurerm_subnet" "this" {
-  address_prefixes     = ["192.168.0.0/24"]
+  address_prefixes     = ["192.168.0.0/25"]
   name                 = module.naming.subnet.name_unique
   resource_group_name  = azurerm_resource_group.this.name
   virtual_network_name = azurerm_virtual_network.this.name
 }
+
+resource "azurerm_subnet" "app_service" {
+  address_prefixes     = ["192.168.0.128/25"]
+  name                 = module.naming.subnet.name_unique
+  resource_group_name  = azurerm_resource_group.this.name
+  virtual_network_name = azurerm_virtual_network.this.name
+  delegation {
+    name = "Microsoft.Web/serverFarms"
+    service_delegation {
+      name    = "Microsoft.Web/serverFarms"
+      actions = ["Microsoft.Network/virtualNetworks/subnets/action"]
+    }
+  }
+}
+
 
 # We make private DNS zones to be able to run the end to end tests
 resource "azurerm_private_dns_zone" "function_app" {
@@ -70,6 +81,25 @@ resource "azurerm_private_dns_zone" "storage_account" {
   resource_group_name = azurerm_resource_group.this.name
 }
 
+# add app insights
+resource "azurerm_log_analytics_workspace" "this" {
+  location            = azurerm_resource_group.this.location
+  name                = module.naming.log_analytics_workspace.name_unique
+  resource_group_name = azurerm_resource_group.this.name
+  retention_in_days   = 7
+  sku                 = "PerGB2018"
+}
+
+resource "azurerm_application_insights" "this" {
+  name                = module.naming.application_insights.name_unique
+  location            = azurerm_resource_group.this.location
+  resource_group_name = azurerm_resource_group.this.name
+  application_type    = "web"
+  workspace_id        = azurerm_log_analytics_workspace.this.workspace_id
+}
+
+
+# pre-requisites for app services
 resource "azurerm_service_plan" "this" {
   name                = module.naming.app_service_plan.name_unique
   resource_group_name = azurerm_resource_group.this.name
@@ -86,15 +116,20 @@ module "function_app_secured_storage" {
   source = "../../"
   # source             = "Azure/avm-ptn-function-app-secured-storage/azurerm"
   # ...
-  name                                  = module.naming.function_app.name_unique
-  location                              = azurerm_resource_group.this.location
-  resource_group_name                   = azurerm_resource_group.this.name
-  private_dns_zone_resource_group_name  = azurerm_resource_group.this.name
-  private_dns_zone_subscription_id      = data.azurerm_client_config.this.subscription_id
-  function_app_storage_account_name     = module.naming.storage_account.name_unique
-  function_app_os_type                  = "Linux"
-  function_app_service_plan_resource_id = azurerm_service_plan.this.id
-  private_endpoint_subnet_resource_id   = azurerm_subnet.this.id
+  name                                 = module.naming.function_app.name_unique
+  location                             = azurerm_resource_group.this.location
+  resource_group_name                  = azurerm_resource_group.this.name
+  private_dns_zone_resource_group_name = azurerm_resource_group.this.name
+  private_dns_zone_subscription_id     = data.azurerm_client_config.this.subscription_id
+  function_app_storage_account_name    = module.naming.storage_account.name_unique
+  os_type                              = "Linux"
+  service_plan_resource_id             = azurerm_service_plan.this.id
+  private_endpoint_subnet_resource_id  = azurerm_subnet.this.id
+  virtual_network_subnet_id            = azurerm_subnet.app_service.id
+
+  site_config = {
+    application_insights_connection_string = azurerm_application_insights.this.connection_string
+  }
 }
 ```
 
@@ -107,8 +142,6 @@ The following requirements are needed by this module:
 
 - <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 3.97.0)
 
-- <a name="requirement_random"></a> [random](#requirement\_random) (~> 3.6.0)
-
 ## Providers
 
 The following providers are used by this module:
@@ -119,10 +152,13 @@ The following providers are used by this module:
 
 The following resources are used by this module:
 
+- [azurerm_application_insights.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/application_insights) (resource)
+- [azurerm_log_analytics_workspace.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/log_analytics_workspace) (resource)
 - [azurerm_private_dns_zone.function_app](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_zone) (resource)
 - [azurerm_private_dns_zone.storage_account](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_dns_zone) (resource)
 - [azurerm_resource_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) (resource)
 - [azurerm_service_plan.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/service_plan) (resource)
+- [azurerm_subnet.app_service](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/subnet) (resource)
 - [azurerm_subnet.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/subnet) (resource)
 - [azurerm_virtual_network.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_network) (resource)
 - [azurerm_client_config.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config) (data source)
@@ -134,17 +170,7 @@ No required inputs.
 
 ## Optional Inputs
 
-The following input variables are optional (have default values):
-
-### <a name="input_enable_telemetry"></a> [enable\_telemetry](#input\_enable\_telemetry)
-
-Description: This variable controls whether or not telemetry is enabled for the module.  
-For more information see <https://aka.ms/avm/telemetryinfo>.  
-If it is set to false, then no telemetry will be collected.
-
-Type: `bool`
-
-Default: `true`
+No optional inputs.
 
 ## Outputs
 

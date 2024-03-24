@@ -213,15 +213,18 @@ variable "tags" {
 
 
 variable "private_endpoint_subnet_resource_id" {
-  type = string
+  type        = string
+  description = "subnet for private endpoints"
 }
 
 variable "private_dns_zone_subscription_id" {
-
+  type        = string
+  description = "subscription id where the Private DNS Zones are registered"
 }
 
 variable "private_dns_zone_resource_group_name" {
-
+  type        = string
+  description = "resource group name where private DNS zones are registered"
 }
 
 # goes on app service plan
