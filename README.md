@@ -509,9 +509,9 @@ The following Modules are called:
 
 ### <a name="module_function_app"></a> [function\_app](#module\_function\_app)
 
-Source: Azure/avm-res-web-site/azurerm
+Source: git::https://github.com/kewalaka/terraform-azurerm-avm-res-web-site.git
 
-Version: 0.1.2
+Version: fix/system_assigned_mi_docs_error
 
 ### <a name="module_storage_account"></a> [storage\_account](#module\_storage\_account)
 

@@ -53,8 +53,10 @@ module "storage_account" {
 }
 
 module "function_app" {
-  source  = "Azure/avm-res-web-site/azurerm"
-  version = "0.1.2"
+  #source  = "Azure/avm-res-web-site/azurerm"
+  #version = "0.1.2"
+  source = "git::https://github.com/kewalaka/terraform-azurerm-avm-res-web-site.git?ref=fix/system_assigned_mi_docs_error"
+
 
   name                = var.name
   resource_group_name = var.resource_group_name
