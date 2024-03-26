@@ -70,6 +70,7 @@ module "function_app" {
   storage_uses_managed_identity = true
   virtual_network_subnet_id     = var.virtual_network_subnet_id
   storage_account_access_key    = module.storage_account.resource.primary_connection_string
+  tags                          = var.tags
 
   managed_identities = {
     system_assigned = true
