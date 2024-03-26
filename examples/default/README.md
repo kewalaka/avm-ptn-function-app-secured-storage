@@ -121,7 +121,7 @@ module "function_app_secured_storage" {
   resource_group_name                  = azurerm_resource_group.this.name
   private_dns_zone_resource_group_name = azurerm_resource_group.this.name
   private_dns_zone_subscription_id     = data.azurerm_client_config.this.subscription_id
-  function_app_storage_account_name    = module.naming.storage_account.name_unique
+  storage_account_name                 = module.naming.storage_account.name_unique
   os_type                              = "Linux"
   service_plan_resource_id             = azurerm_service_plan.this.id
   private_endpoint_subnet_resource_id  = azurerm_subnet.this.id

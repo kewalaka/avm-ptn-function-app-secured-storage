@@ -41,12 +41,6 @@ The following resources are used by this module:
 
 The following input variables are required:
 
-### <a name="input_function_app_storage_account_name"></a> [function\_app\_storage\_account\_name](#input\_function\_app\_storage\_account\_name)
-
-Description: The name of the this resource.
-
-Type: `string`
-
 ### <a name="input_location"></a> [location](#input\_location)
 
 Description: Azure region where the resource should be deployed.  If null, the location will be inferred from the resource group location.
@@ -92,6 +86,12 @@ Type: `string`
 ### <a name="input_service_plan_resource_id"></a> [service\_plan\_resource\_id](#input\_service\_plan\_resource\_id)
 
 Description: The resource ID of the App Service Plan to deploy the Function App in.
+
+Type: `string`
+
+### <a name="input_storage_account_name"></a> [storage\_account\_name](#input\_storage\_account\_name)
+
+Description: The name of the this resource.
 
 Type: `string`
 

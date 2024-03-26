@@ -8,7 +8,7 @@ module "storage_account" {
   source = "git::https://github.com/Azure/terraform-azurerm-avm-res-storage-storageaccount?ref=5c5af3b08b3b4f60ab4fb3315a2079b672bca38d"
   #version                  = "~> 0.1.2"
   account_replication_type      = "LRS"
-  name                          = var.function_app_storage_account_name
+  name                          = var.storage_account_name
   resource_group_name           = var.resource_group_name
   location                      = var.location
   public_network_access_enabled = false
@@ -19,7 +19,7 @@ module "storage_account" {
   private_endpoints = {
     for endpoint in local.endpoints :
     endpoint => {
-      name                          = "pe-${endpoint}-${var.function_app_storage_account_name}"
+      name                          = "pe-${endpoint}-${var.storage_account_name}"
       subnet_resource_id            = var.private_endpoint_subnet_resource_id
       subresource_name              = [endpoint]
       private_dns_zone_resource_ids = ["/subscriptions/${var.private_dns_zone_subscription_id}/resourceGroups/${var.private_dns_zone_resource_group_name}/providers/Microsoft.Network/privateDnsZones/privatelink.${endpoint}.core.windows.net"]
@@ -44,7 +44,7 @@ module "storage_account" {
 
   shares = {
     function_app_share = {
-      name  = var.function_app_storage_account_name
+      name  = var.storage_account_name
       quota = 100
     }
   }
@@ -104,7 +104,7 @@ module "function_app" {
       AzureWebJobsStorage__tableServiceUri = "https://${module.storage_account.name}.table.core.windows.net"
 
       WEBSITE_CONTENTAZUREFILECONNECTIONSTRING = module.storage_account.resource.primary_connection_string
-      WEBSITE_CONTENTSHARE                     = var.function_app_storage_account_name
+      WEBSITE_CONTENTSHARE                     = var.storage_account_name
 
       WEBSITE_CONTENTOVERVNET = 1
     }

@@ -10,7 +10,7 @@ variable "name" {
   # }
 }
 
-variable "function_app_storage_account_name" {
+variable "storage_account_name" {
   type        = string
   description = "The name of the this resource."
 
