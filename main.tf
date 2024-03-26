@@ -45,7 +45,7 @@ module "storage_account" {
   shares = {
     function_app_share = {
       name  = var.storage_account_name
-      quota = 100
+      quota = 1 # in GB
     }
   }
 
