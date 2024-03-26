@@ -2,12 +2,24 @@ variable "name" {
   type        = string
   description = "The name of the this resource."
 
-  validation {
-    condition     = can(regex("TODO", var.name))
-    error_message = "The name must be TODO." # TODO remove the example below once complete:
-    #condition     = can(regex("^[a-z0-9]{5,50}$", var.name))
-    #error_message = "The name must be between 5 and 50 characters long and can only contain lowercase letters and numbers."
-  }
+  # validation {
+  #   condition     = can(regex("TODO", var.name))
+  #   error_message = "The name must be TODO." # TODO remove the example below once complete:
+  #   #condition     = can(regex("^[a-z0-9]{5,50}$", var.name))
+  #   #error_message = "The name must be between 5 and 50 characters long and can only contain lowercase letters and numbers."
+  # }
+}
+
+variable "storage_account_name" {
+  type        = string
+  description = "The name of the this resource."
+
+  # validation {
+  #   condition     = can(regex("TODO", var.name))
+  #   error_message = "The name must be TODO." # TODO remove the example below once complete:
+  #   #condition     = can(regex("^[a-z0-9]{5,50}$", var.name))
+  #   #error_message = "The name must be between 5 and 50 characters long and can only contain lowercase letters and numbers."
+  # }
 }
 
 # This is required for most resource modules
@@ -87,7 +99,6 @@ DESCRIPTION
 
 variable "location" {
   type        = string
-  default     = null
   description = "Azure region where the resource should be deployed.  If null, the location will be inferred from the resource group location."
 }
 
@@ -199,3 +210,25 @@ variable "tags" {
   default     = {}
   description = "The map of tags to be applied to the resource"
 }
+
+
+variable "private_endpoint_subnet_resource_id" {
+  type        = string
+  description = "subnet for private endpoints"
+}
+
+variable "private_dns_zone_subscription_id" {
+  type        = string
+  description = "subscription id where the Private DNS Zones are registered"
+}
+
+variable "private_dns_zone_resource_group_name" {
+  type        = string
+  description = "resource group name where private DNS zones are registered"
+}
+
+# goes on app service plan
+# variable "sku" {
+#   description = "Specifies the Azure Function hosting plan SKU."
+#   # add validation for EP1, EP2 or EP3
+# }
