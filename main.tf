@@ -66,10 +66,10 @@ module "function_app" {
   os_type                       = var.os_type # "Linux" / "Windows" / azurerm_service_plan.example.os_type
   public_network_access_enabled = false
   service_plan_resource_id      = var.service_plan_resource_id
-
   storage_account_name          = module.storage_account.name
   storage_uses_managed_identity = true
-  #storage_account_access_key = module.storage_account.resource.primary_connection_string
+  virtual_network_subnet_id     = var.virtual_network_subnet_id
+  storage_account_access_key    = module.storage_account.resource.primary_connection_string
 
   managed_identities = {
     system_assigned = true
